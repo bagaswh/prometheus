@@ -19,6 +19,8 @@ examples and guides.</p>
 
 </div>
 
+> This fork adds compute_type_filter to the Azure SD configuration to filter whether to only fetch VMSS or VMs.
+
 Prometheus, a [Cloud Native Computing Foundation](https://cncf.io/) project, is a systems and service monitoring system. It collects metrics
 from configured targets at given intervals, evaluates rule expressions,
 displays the results, and can trigger alerts when specified conditions are observed.

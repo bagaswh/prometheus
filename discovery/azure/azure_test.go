@@ -491,159 +491,207 @@ func TestNewAzureResourceFromID(t *testing.T) {
 }
 
 func TestAzureRefresh(t *testing.T) {
+	vmResp := []armcompute.VirtualMachinesClientListAllResponse{
+		{
+			VirtualMachineListResult: armcompute.VirtualMachineListResult{
+				Value: []*armcompute.VirtualMachine{
+					defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm1"), to.Ptr("vm1")),
+					defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm2"), to.Ptr("vm2")),
+				},
+			},
+		},
+		{
+			VirtualMachineListResult: armcompute.VirtualMachineListResult{
+				Value: []*armcompute.VirtualMachine{
+					defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm3"), to.Ptr("vm3")),
+					defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm4"), to.Ptr("vm4")),
+				},
+			},
+		},
+	}
+	vmssResp := []armcompute.VirtualMachineScaleSetsClientListAllResponse{
+		{
+			VirtualMachineScaleSetListWithLinkResult: armcompute.VirtualMachineScaleSetListWithLinkResult{
+				Value: []*armcompute.VirtualMachineScaleSet{
+					{
+						ID:       to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1"),
+						Name:     to.Ptr("vmScaleSet1"),
+						Location: to.Ptr("australiaeast"),
+						Type:     to.Ptr("Microsoft.Compute/virtualMachineScaleSets"),
+					},
+				},
+			},
+		},
+	}
+	vmssVmResp := []armcompute.VirtualMachineScaleSetVMsClientListResponse{
+		{
+			VirtualMachineScaleSetVMListResult: armcompute.VirtualMachineScaleSetVMListResult{
+				Value: []*armcompute.VirtualMachineScaleSetVM{
+					defaultVMSSVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm1"), to.Ptr("vmScaleSet1_vm1")),
+					defaultVMSSVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm2"), to.Ptr("vmScaleSet1_vm2")),
+				},
+			},
+		},
+	}
+	interfacesResp := armnetwork.Interface{
+		ID: to.Ptr(defaultMockNetworkID),
+		Properties: &armnetwork.InterfacePropertiesFormat{
+			Primary: to.Ptr(true),
+			IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+				{Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+					PrivateIPAddress: to.Ptr("10.0.0.1"),
+				}},
+			},
+		},
+	}
+	labelSetVMs := []model.LabelSet{
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm1",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vm1",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm2",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vm2",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm3",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vm3",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm4",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vm4",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+	}
+	labelSetVMSS := []model.LabelSet{
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm1",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vmScaleSet1_vm1",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_scale_set":      "vmScaleSet1",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+		{
+			"__address__":                         "10.0.0.1:80",
+			"__meta_azure_machine_computer_name":  "computer_name",
+			"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm2",
+			"__meta_azure_machine_location":       "australiaeast",
+			"__meta_azure_machine_name":           "vmScaleSet1_vm2",
+			"__meta_azure_machine_os_type":        "Linux",
+			"__meta_azure_machine_private_ip":     "10.0.0.1",
+			"__meta_azure_machine_resource_group": "{resourceGroup}",
+			"__meta_azure_machine_scale_set":      "vmScaleSet1",
+			"__meta_azure_machine_size":           "size",
+			"__meta_azure_machine_tag_prometheus": "",
+			"__meta_azure_subscription_id":        "",
+			"__meta_azure_tenant_id":              "",
+		},
+	}
+
 	tests := []struct {
-		scenario       string
-		vmResp         []armcompute.VirtualMachinesClientListAllResponse
-		vmssResp       []armcompute.VirtualMachineScaleSetsClientListAllResponse
-		vmssvmResp     []armcompute.VirtualMachineScaleSetVMsClientListResponse
-		interfacesResp armnetwork.Interface
-		expectedTG     []*targetgroup.Group
+		scenario              string
+		withComputeTypeFilter []string
+		vmResp                []armcompute.VirtualMachinesClientListAllResponse
+		vmssResp              []armcompute.VirtualMachineScaleSetsClientListAllResponse
+		vmssvmResp            []armcompute.VirtualMachineScaleSetVMsClientListResponse
+		interfacesResp        armnetwork.Interface
+		expectedTG            []*targetgroup.Group
 	}{
 		{
-			scenario: "VMs, VMSS and VMSSVMs in Multiple Responses",
-			vmResp: []armcompute.VirtualMachinesClientListAllResponse{
-				{
-					VirtualMachineListResult: armcompute.VirtualMachineListResult{
-						Value: []*armcompute.VirtualMachine{
-							defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm1"), to.Ptr("vm1")),
-							defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm2"), to.Ptr("vm2")),
-						},
-					},
-				},
-				{
-					VirtualMachineListResult: armcompute.VirtualMachineListResult{
-						Value: []*armcompute.VirtualMachine{
-							defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm3"), to.Ptr("vm3")),
-							defaultVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm4"), to.Ptr("vm4")),
-						},
-					},
-				},
-			},
-			vmssResp: []armcompute.VirtualMachineScaleSetsClientListAllResponse{
-				{
-					VirtualMachineScaleSetListWithLinkResult: armcompute.VirtualMachineScaleSetListWithLinkResult{
-						Value: []*armcompute.VirtualMachineScaleSet{
-							{
-								ID:       to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1"),
-								Name:     to.Ptr("vmScaleSet1"),
-								Location: to.Ptr("australiaeast"),
-								Type:     to.Ptr("Microsoft.Compute/virtualMachineScaleSets"),
-							},
-						},
-					},
-				},
-			},
-			vmssvmResp: []armcompute.VirtualMachineScaleSetVMsClientListResponse{
-				{
-					VirtualMachineScaleSetVMListResult: armcompute.VirtualMachineScaleSetVMListResult{
-						Value: []*armcompute.VirtualMachineScaleSetVM{
-							defaultVMSSVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm1"), to.Ptr("vmScaleSet1_vm1")),
-							defaultVMSSVMWithIDAndName(to.Ptr("/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm2"), to.Ptr("vmScaleSet1_vm2")),
-						},
-					},
-				},
-			},
-			interfacesResp: armnetwork.Interface{
-				ID: to.Ptr(defaultMockNetworkID),
-				Properties: &armnetwork.InterfacePropertiesFormat{
-					Primary: to.Ptr(true),
-					IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
-						{Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
-							PrivateIPAddress: to.Ptr("10.0.0.1"),
-						}},
-					},
-				},
-			},
+			scenario:       "VMs, VMSS and VMSSVMs in Multiple Responses",
+			vmResp:         vmResp,
+			vmssResp:       vmssResp,
+			vmssvmResp:     vmssVmResp,
+			interfacesResp: interfacesResp,
 			expectedTG: []*targetgroup.Group{
 				{
-					Targets: []model.LabelSet{
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm1",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vm1",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm2",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vm2",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm3",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vm3",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachine/vm4",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vm4",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm1",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vmScaleSet1_vm1",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_scale_set":      "vmScaleSet1",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-						{
-							"__address__":                         "10.0.0.1:80",
-							"__meta_azure_machine_computer_name":  "computer_name",
-							"__meta_azure_machine_id":             "/subscriptions/00000000-0000-0000-0000-00000000000/resourceGroups/{resourceGroup}/providers/Microsoft.Compute/virtualMachineScaleSets/vmScaleSet1/virtualMachines/vmScaleSet1_vm2",
-							"__meta_azure_machine_location":       "australiaeast",
-							"__meta_azure_machine_name":           "vmScaleSet1_vm2",
-							"__meta_azure_machine_os_type":        "Linux",
-							"__meta_azure_machine_private_ip":     "10.0.0.1",
-							"__meta_azure_machine_resource_group": "{resourceGroup}",
-							"__meta_azure_machine_scale_set":      "vmScaleSet1",
-							"__meta_azure_machine_size":           "size",
-							"__meta_azure_machine_tag_prometheus": "",
-							"__meta_azure_subscription_id":        "",
-							"__meta_azure_tenant_id":              "",
-						},
-					},
+					Targets: slices.Concat(labelSetVMs, labelSetVMSS),
+				},
+			},
+		},
+		{
+			scenario:              "VMs, VMSS and VMSSVMs in Multiple Responses with Compute Type Filter: virtualMachines",
+			withComputeTypeFilter: []string{"virtualMachines"},
+			vmResp:                vmResp,
+			vmssResp:              []armcompute.VirtualMachineScaleSetsClientListAllResponse{},
+			vmssvmResp:            []armcompute.VirtualMachineScaleSetVMsClientListResponse{},
+			interfacesResp:        interfacesResp,
+			expectedTG: []*targetgroup.Group{
+				{
+					Targets: slices.Concat(labelSetVMs),
+				},
+			},
+		},
+		{
+			scenario:              "VMs, VMSS and VMSSVMs in Multiple Responses with Compute Type Filter: virtualMachineScaleSets",
+			withComputeTypeFilter: []string{"virtualMachineScaleSets"},
+			vmResp:                []armcompute.VirtualMachinesClientListAllResponse{},
+			vmssResp:              vmssResp,
+			vmssvmResp:            vmssVmResp,
+			interfacesResp:        interfacesResp,
+			expectedTG: []*targetgroup.Group{
+				{
+					Targets: slices.Concat(labelSetVMSS),
+				},
+			},
+		},
+		{
+			scenario:              "VMs, VMSS and VMSSVMs in Multiple Responses with Compute Type Filter: virtualMachines, virtualMachineScaleSets",
+			withComputeTypeFilter: []string{"virtualMachines", "virtualMachineScaleSets"},
+			vmResp:                vmResp,
+			vmssResp:              vmssResp,
+			vmssvmResp:            vmssVmResp,
+			interfacesResp:        interfacesResp,
+			expectedTG: []*targetgroup.Group{
+				{
+					Targets: slices.Concat(labelSetVMs, labelSetVMSS),
 				},
 			},
 		},
@@ -651,7 +699,10 @@ func TestAzureRefresh(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.scenario, func(t *testing.T) {
 			t.Parallel()
-			azureSDConfig := &DefaultSDConfig
+			azureSDConfig := DefaultSDConfig
+			if len(tc.withComputeTypeFilter) > 0 {
+				azureSDConfig.ComputeTypeFilter = tc.withComputeTypeFilter
+			}
 
 			azureClient := createMockAzureClient(t, tc.vmResp, tc.vmssResp, tc.vmssvmResp, tc.interfacesResp, nil)
 
@@ -659,7 +710,7 @@ func TestAzureRefresh(t *testing.T) {
 			refreshMetrics := discovery.NewRefreshMetrics(reg)
 			metrics := azureSDConfig.NewDiscovererMetrics(reg, refreshMetrics)
 
-			sd, err := NewDiscovery(azureSDConfig, nil, metrics)
+			sd, err := NewDiscovery(&azureSDConfig, nil, metrics)
 			require.NoError(t, err)
 
 			tg, err := sd.refreshAzureClient(context.Background(), azureClient)
