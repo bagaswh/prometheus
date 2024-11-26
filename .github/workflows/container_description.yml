@@ -6,14 +6,14 @@ on:
       - "README.md"
       - "README-containers.md"
       - ".github/workflows/container_description.yml"
-    branches: [main, master]
+    branches: [ main, master ]
 
 permissions:
   contents: read
 
 jobs:
   PushDockerHubReadme:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Push README to Docker Hub
     if: github.repository_owner == 'prometheus' || github.repository_owner == 'prometheus-community' # Don't run this workflow on forks.
     steps:
@@ -32,10 +32,10 @@ jobs:
           short_description: ${{ env.DOCKER_REPO_NAME }}
           # Empty string results in README-containers.md being pushed if it
           # exists. Otherwise, README.md is pushed.
-          readme_file: ""
+          readme_file: ''
 
   PushQuayIoReadme:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     name: Push README to quay.io
     if: github.repository_owner == 'prometheus' || github.repository_owner == 'prometheus-community' # Don't run this workflow on forks.
     steps:
@@ -54,4 +54,4 @@ jobs:
           provider: quay
           # Empty string results in README-containers.md being pushed if it
           # exists. Otherwise, README.md is pushed.
-          readme_file: ""
+          readme_file: ''

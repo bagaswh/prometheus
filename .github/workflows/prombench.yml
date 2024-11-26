@@ -20,7 +20,7 @@ jobs:
   benchmark_start:
     name: Benchmark Start
     if: github.event.action == 'prombench_start'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Update status to pending
         run: >-
@@ -55,7 +55,7 @@ jobs:
   benchmark_cancel:
     name: Benchmark Cancel
     if: github.event.action == 'prombench_stop'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Update status to pending
         run: >-
@@ -90,7 +90,7 @@ jobs:
   benchmark_restart:
     name: Benchmark Restart
     if: github.event.action == 'prombench_restart'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Update status to pending
         run: >-

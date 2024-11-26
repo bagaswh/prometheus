@@ -9,7 +9,7 @@ jobs:
   run_funcbench:
     name: Running funcbench
     if: github.event.action == 'funcbench_start'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       AUTH_FILE: ${{ secrets.TEST_INFRA_PROVIDER_AUTH }}
       BRANCH: ${{ github.event.client_payload.BRANCH }}
