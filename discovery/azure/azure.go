@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -120,6 +121,8 @@ type SDConfig struct {
 	ResourceGroup        string             `yaml:"resource_group,omitempty"`
 
 	HTTPClientConfig config_util.HTTPClientConfig `yaml:",inline"`
+
+	ComputeTypeFilter []string `yaml:"compute_type_filter,omitempty"`
 }
 
 // NewDiscovererMetrics implements discovery.Config.
@@ -193,6 +196,9 @@ func NewDiscovery(cfg *SDConfig, logger *slog.Logger, metrics discovery.Discover
 		logger = promslog.NewNopLogger()
 	}
 	l := cache.New(cache.AsLRU[string, *armnetwork.Interface](lru.WithCapacity(5000)))
+	if len(cfg.ComputeTypeFilter) == 0 {
+		cfg.ComputeTypeFilter = []string{"virtualMachines", "virtualMachineScaleSets"}
+	}
 	d := &Discovery{
 		cfg:     cfg,
 		port:    cfg.Port,
@@ -351,28 +357,36 @@ func newAzureResourceFromID(id string, logger *slog.Logger) (*arm.ResourceID, er
 }
 
 func (d *Discovery) refreshAzureClient(ctx context.Context, client client) ([]*targetgroup.Group, error) {
-	machines, err := client.getVMs(ctx, d.cfg.ResourceGroup)
-	if err != nil {
-		d.metrics.failuresCount.Inc()
-		return nil, fmt.Errorf("could not get virtual machines: %w", err)
+	var machines []virtualMachine
+	if slices.Contains(d.cfg.ComputeTypeFilter, "virtualMachines") {
+		var err error
+		machines, err = client.getVMs(ctx, d.cfg.ResourceGroup)
+		if err != nil {
+			d.metrics.failuresCount.Inc()
+			return nil, fmt.Errorf("could not get virtual machines: %w", err)
+		}
 	}
 
 	d.logger.Debug("Found virtual machines during Azure discovery.", "count", len(machines))
 
 	// Load the vms managed by scale sets.
-	scaleSets, err := client.getScaleSets(ctx, d.cfg.ResourceGroup)
-	if err != nil {
-		d.metrics.failuresCount.Inc()
-		return nil, fmt.Errorf("could not get virtual machine scale sets: %w", err)
-	}
-
-	for _, scaleSet := range scaleSets {
-		scaleSetVms, err := client.getScaleSetVMs(ctx, scaleSet)
+	var scaleSets []armcompute.VirtualMachineScaleSet
+	if slices.Contains(d.cfg.ComputeTypeFilter, "virtualMachineScaleSets") {
+		var err error
+		scaleSets, err = client.getScaleSets(ctx, d.cfg.ResourceGroup)
 		if err != nil {
 			d.metrics.failuresCount.Inc()
-			return nil, fmt.Errorf("could not get virtual machine scale set vms: %w", err)
+			return nil, fmt.Errorf("could not get virtual machine scale sets: %w", err)
 		}
-		machines = append(machines, scaleSetVms...)
+
+		for _, scaleSet := range scaleSets {
+			scaleSetVms, err := client.getScaleSetVMs(ctx, scaleSet)
+			if err != nil {
+				d.metrics.failuresCount.Inc()
+				return nil, fmt.Errorf("could not get virtual machine scale set vms: %w", err)
+			}
+			machines = append(machines, scaleSetVms...)
+		}
 	}
 
 	// We have the slice of machines. Now turn them into targets.
