@@ -6,7 +6,7 @@ env:
   AUTH_FILE: ${{ secrets.TEST_INFRA_PROVIDER_AUTH }}
   CLUSTER_NAME: test-infra
   DOMAIN_NAME: prombench.prometheus.io
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
   GITHUB_ORG: prometheus
   GITHUB_REPO: prometheus
   GITHUB_STATUS_TARGET_URL: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
