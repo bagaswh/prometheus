@@ -523,7 +523,7 @@ func TestAzureRefresh(t *testing.T) {
 			},
 		},
 	}
-	vmssVmResp := []armcompute.VirtualMachineScaleSetVMsClientListResponse{
+	vmssVMResp := []armcompute.VirtualMachineScaleSetVMsClientListResponse{
 		{
 			VirtualMachineScaleSetVMListResult: armcompute.VirtualMachineScaleSetVMListResult{
 				Value: []*armcompute.VirtualMachineScaleSetVM{
@@ -648,7 +648,7 @@ func TestAzureRefresh(t *testing.T) {
 			scenario:       "VMs, VMSS and VMSSVMs in Multiple Responses",
 			vmResp:         vmResp,
 			vmssResp:       vmssResp,
-			vmssvmResp:     vmssVmResp,
+			vmssvmResp:     vmssVMResp,
 			interfacesResp: interfacesResp,
 			expectedTG: []*targetgroup.Group{
 				{
@@ -674,7 +674,7 @@ func TestAzureRefresh(t *testing.T) {
 			withComputeTypeFilter: []string{"virtualMachineScaleSets"},
 			vmResp:                []armcompute.VirtualMachinesClientListAllResponse{},
 			vmssResp:              vmssResp,
-			vmssvmResp:            vmssVmResp,
+			vmssvmResp:            vmssVMResp,
 			interfacesResp:        interfacesResp,
 			expectedTG: []*targetgroup.Group{
 				{
@@ -687,7 +687,7 @@ func TestAzureRefresh(t *testing.T) {
 			withComputeTypeFilter: []string{"virtualMachines", "virtualMachineScaleSets"},
 			vmResp:                vmResp,
 			vmssResp:              vmssResp,
-			vmssvmResp:            vmssVmResp,
+			vmssvmResp:            vmssVMResp,
 			interfacesResp:        interfacesResp,
 			expectedTG: []*targetgroup.Group{
 				{
